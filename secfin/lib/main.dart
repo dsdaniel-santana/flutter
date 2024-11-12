@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 void main() {
   runApp(MyApp());
@@ -14,7 +16,37 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class DespesasScreen extends StatelessWidget {
+class DespesasScreen extends StatefulWidget {
+  @override
+  _DespesasScreenState createState() => _DespesasScreenState();
+}
+
+class _DespesasScreenState extends State<DespesasScreen> {
+  List despesas = []; // Lista para armazenar as despesas
+
+  // Função para listar despesas
+  Future<void> listarDespesas() async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost/secfin/backend/despesas/listAll.php'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({"status": "ativo"}), // Envie o status conforme necessário
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          despesas = data['despesas']; // Atualiza a lista com as despesas da API
+        });
+      } else {
+        // Lidar com erro ao buscar despesas
+        print('Erro ao buscar despesas: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Erro: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,12 +62,12 @@ class DespesasScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Center(  // Aqui está a mudança
+      body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,  // Centraliza verticalmente
-            crossAxisAlignment: CrossAxisAlignment.center,  // Centraliza horizontalmente
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 'Olá Usuário,',
@@ -69,9 +101,7 @@ class DespesasScreen extends StatelessWidget {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  // Função para listar despesas
-                },
+                onPressed: listarDespesas, // Chama a função para listar despesas
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.black87,
                   padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
@@ -81,6 +111,22 @@ class DespesasScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 18, color: Colors.white),
                 ),
               ),
+              SizedBox(height: 30),
+              despesas.isNotEmpty
+                  ? Expanded(
+                      child: ListView.builder(
+                        itemCount: despesas.length,
+                        itemBuilder: (context, index) {
+                          final despesa = despesas[index];
+                          return ListTile(
+                            title: Text(despesa['credor']),
+                            subtitle: Text('Vencimento: ${despesa['vencimento']}'),
+                            trailing: Text('R\$ ${despesa['valor']}'),
+                          );
+                        },
+                      ),
+                    )
+                  : Text('Nenhuma despesa encontrada.'),
             ],
           ),
         ),

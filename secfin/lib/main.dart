@@ -178,7 +178,6 @@ class _DespesasScreenState extends State<DespesasScreen> {
                             child: ListView.builder(
                               itemCount: despesas.length,
                               itemBuilder: (context, index) {
-                                if (index >= 4) return null; // Limita a exibição a 4 linhas
                                 final despesa = despesas[index];
                                 return Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

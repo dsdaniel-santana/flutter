@@ -1,6 +1,8 @@
 **COMEÇO MAIN.DART (TELA DE SALVAR DESPESAS)**
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() {
   runApp(MyApp());
@@ -26,14 +28,43 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
   final TextEditingController vencimentoController = TextEditingController();
   final TextEditingController valorController = TextEditingController();
   final TextEditingController observacaoController = TextEditingController();
-  String? statusSelecionado;
+  String? statusSelecionado = 'Previsão'; // Inicializa com "Previsão"
 
-  void salvarDespesa() {
-    print("Credor: ${credorController.text}");
-    print("Vencimento: ${vencimentoController.text}");
-    print("Valor: ${valorController.text}");
-    print("Observação: ${observacaoController.text}");
-    print("Status: $statusSelecionado");
+  Future<void> salvarDespesa() async {
+    var url = Uri.parse('http://localhost/secfin/backend/despesas/save.php');
+
+    // Converte o valor de entrada para o formato correto com ponto como separador decimal
+    String valorFormatado = valorController.text.replaceAll(',', '.');
+
+    var response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'credor': credorController.text,
+        'vencimento': DateFormat('yyyy-MM-dd').format(DateFormat('dd/MM/yyyy').parse(vencimentoController.text)),
+        'valor': valorFormatado, // Passa o valor convertido
+        'observacao': observacaoController.text,
+        'status': statusSelecionado,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      var responseData = jsonDecode(response.body);
+      if (responseData['msg'] == 'Despesa foi cadastrada') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Despesa cadastrada com sucesso!'),
+        ));
+        _limparFormulario(); // Limpa o formulário após salvar
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erro ao cadastrar despesa'),
+        ));
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erro na comunicação com o servidor'),
+      ));
+    }
   }
 
   Future<void> _selecionarData(BuildContext context) async {
@@ -49,6 +80,17 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
         vencimentoController.text = formattedDate;
       });
     }
+  }
+
+  // Função para limpar o formulário
+  void _limparFormulario() {
+    credorController.clear();
+    vencimentoController.clear();
+    valorController.clear();
+    observacaoController.clear();
+    setState(() {
+      statusSelecionado = 'Previsão'; // Reseta para "Previsão"
+    });
   }
 
   @override
@@ -72,7 +114,7 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 20), // Espaço inicial
+            SizedBox(height: 20),
 
             Text(
               'Credor',
@@ -120,7 +162,6 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
             ),
             SizedBox(height: 24),
 
-            // Novo campo de Observação
             Text(
               'Observação',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -148,7 +189,6 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
                 border: OutlineInputBorder(),
               ),
               items: [
-                DropdownMenuItem(value: null, child: Text('Selecione um Status')),
                 DropdownMenuItem(value: 'Previsão', child: Text('Previsão')),
                 DropdownMenuItem(value: 'Concluído', child: Text('Concluído')),
               ],
@@ -158,7 +198,7 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
                 });
               },
             ),
-            SizedBox(height: 40), // Espaço antes do botão "Salvar"
+            SizedBox(height: 40),
 
             Center(
               child: ElevatedButton(
@@ -216,12 +256,12 @@ class _DespesaFormScreenState extends State<DespesaFormScreen> {
 }
 
 
-
 **FINAL MAIN.DART (TELA DE SALVAR DESPESAS)**
 
 
 
 **COMEÇO PUBSPEC.YAML (TELA DE SALVAR DESPESAS)**
+
 name: secfin
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
@@ -258,6 +298,8 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.18.0  # Certifique-se de usar a versão mais recente
+  http: ^0.13.3  # Adicionando a dependência http
+
 
 
   # The following adds the Cupertino Icons font to your application.
